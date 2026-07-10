@@ -338,25 +338,38 @@ export default function Navbar({
                   <code className="block break-all rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-slate-200">
                     {linkUrl}
                   </code>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full rounded-xl border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
-                    onClick={() => {
-                      navigator.clipboard.writeText(linkUrl);
-                      setSettingsMessage('Link copied to clipboard!');
-                    }}
-                  >
-                    Copy Link
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full rounded-xl border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
-                    onClick={() => window.open(linkUrl, '_blank')}
-                  >
-                    Open & Link Now
-                  </Button>
+                  {linkToken && (
+                    <Button
+                      className="w-full rounded-xl bg-blue-500 text-white hover:bg-blue-600 font-semibold"
+                      onClick={() => {
+                        const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
+                        window.open(`https://t.me/${botUsername}?start=${linkToken}`, '_blank');
+                      }}
+                    >
+                      ✈️ Link in Telegram (One-Click)
+                    </Button>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
+                      onClick={() => {
+                        navigator.clipboard.writeText(linkUrl);
+                        setSettingsMessage('Link copied to clipboard!');
+                      }}
+                    >
+                      Copy Web Link
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
+                      onClick={() => window.open(linkUrl, '_blank')}
+                    >
+                      Open Web Link
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

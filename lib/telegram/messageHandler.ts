@@ -51,6 +51,15 @@ export async function handleTelegramMessage(update: TelegramUpdate) {
       .eq('telegram_user_id', telegramUserId)
       .single();
 
+    // Check if this is a deep link start command (e.g. /start <token>)
+    if (message.text && message.text.startsWith('/start ') && message.text.length > 7) {
+      const token = message.text.substring(7).trim();
+      const linked = await handleDeepLinkToken(chatId, token, telegramUserId);
+      if (linked) {
+        return; // Successfully linked, exit early
+      }
+    }
+
     if (!user) {
       // User is not linked yet
       const appUrl = process.env.NEXTAUTH_URL || 'https://drop-it.vercel.app';
@@ -412,5 +421,70 @@ async function handleCommand(chatId: number, command: string, userId: string, te
 
     default:
       await sendTelegramMessage(chatId, 'Unknown command. Type /help for available commands.');
+  }
+}
+
+/**
+ * Handle Telegram Bot deep linking token (/start <token>)
+ */
+async function handleDeepLinkToken(chatId: number, token: string, telegramUserId: number): Promise<boolean> {
+  try {
+    // 1. Look up the token in link_tokens
+    const { data: linkToken, error: tokenError } = await supabaseAdmin
+      .from('link_tokens')
+      .select('user_id, expires_at')
+      .eq('token', token)
+      .single();
+
+    if (tokenError || !linkToken) {
+      await sendTelegramMessage(
+        chatId,
+        '❌ <b>Invalid or expired linking link.</b>\n\nPlease go to settings on your drop_it dashboard, generate a new link, and try again.',
+        { parseMode: 'HTML' }
+      );
+      return false;
+    }
+
+    // 2. Check if the token has expired
+    if (new Date(linkToken.expires_at) < new Date()) {
+      await supabaseAdmin.from('link_tokens').delete().eq('token', token);
+      await sendTelegramMessage(
+        chatId,
+        '❌ <b>The linking token has expired.</b>\n\nPlease generate a new link in your dashboard settings.',
+        { parseMode: 'HTML' }
+      );
+      return false;
+    }
+
+    // 3. Associate the Telegram User ID with this user
+    const { error: linkError } = await supabaseAdmin
+      .from('users')
+      .update({
+        telegram_user_id: telegramUserId,
+        telegram_link_code: null, // Clear old code if any
+        telegram_link_code_expires_at: null,
+      })
+      .eq('id', linkToken.user_id);
+
+    if (linkError) {
+      console.error('Failed to link Telegram user:', linkError);
+      await sendTelegramMessage(chatId, '❌ Failed to link your account. Please try again later.');
+      return false;
+    }
+
+    // 4. Clean up the token
+    await supabaseAdmin.from('link_tokens').delete().eq('token', token);
+
+    // 5. Send confirmation message
+    await sendTelegramMessage(
+      chatId,
+      '🎉 <b>Account successfully linked!</b>\n\nYou can now forward or send me links, notes, images, or documents, and they will appear on your dashboard instantly.',
+      { parseMode: 'HTML' }
+    );
+
+    return true;
+  } catch (error) {
+    console.error('handleDeepLinkToken error:', error);
+    return false;
   }
 }

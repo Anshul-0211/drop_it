@@ -1,0 +1,108 @@
+# -----------------------------
+# Transactional Database
+# -----------------------------
+transactions = [
+    {'Milk', 'Bread', 'Butter'},
+    {'Beer', 'Bread'},
+    {'Milk', 'Bread', 'Beer', 'Butter'},
+    {'Bread', 'Butter'},
+    {'Milk', 'Bread', 'Butter'}
+]
+
+min_support = 0.3      # minimum support
+min_confidence = 0.6   # minimum confidence
+transaction_count = len(transactions)
+
+
+# -----------------------------
+# SUPPORT FUNCTION
+# -----------------------------
+def support(itemset):
+    count = 0
+    for t in transactions:
+        if itemset.issubset(t):
+            count += 1
+    return count / transaction_count
+
+
+# -----------------------------
+# APRIORI FREQUENT ITEMSETS
+# -----------------------------
+def apriori():
+    # Step 1: Generate C1
+    items = set()
+    for t in transactions:
+        for item in t:
+            items.add(frozenset([item]))                                                                                   
+
+    # Step 2: Generate L1
+    freq_itemsets = {}
+    L = []
+    for item in items:
+        s = support(set(item))
+        if s >= min_support:
+            freq_itemsets[item] = s
+            L.append(item)
+
+    k = 2
+    while L:
+        candidates = set()
+        for i in range(len(L)):
+            for j in range(i + 1, len(L)):
+                union = L[i] | L[j]
+                if len(union) == k:
+                    candidates.add(union)
+
+        L = []
+        for c in candidates:
+            s = support(set(c))
+            if s >= min_support:
+                freq_itemsets[c] = s
+                L.append(c)
+
+        k += 1
+
+    return freq_itemsets
+
+
+# -----------------------------
+# ASSOCIATION RULE GENERATION
+# -----------------------------
+def generate_rules(freq_itemsets):
+    rules = []
+
+    for itemset in freq_itemsets:
+        if len(itemset) >= 2:
+            for item in itemset:
+                antecedent = frozenset([item])
+                consequent = itemset - antecedent
+
+                conf = freq_itemsets[itemset] / freq_itemsets[antecedent]
+
+                if conf >= min_confidence:
+                    lift = conf / freq_itemsets[consequent]
+                    rules.append((antecedent, consequent, conf, lift))
+
+    return rules
+
+
+# -----------------------------
+# RUN ALGORITHM
+# -----------------------------
+frequent_itemsets = apriori()
+rules = generate_rules(frequent_itemsets)
+
+# -----------------------------
+# OUTPUT
+# -----------------------------
+print("\nFrequent Itemsets:")
+for itemset, sup in frequent_itemsets.items():
+    print(set(itemset), "Support:", round(sup, 2))
+
+print("\nAssociation Rules:")
+for rule in rules:
+    print(
+        set(rule[0]), "->", set(rule[1]),
+        "Confidence:", round(rule[2], 2),
+        "Lift:", round(rule[3], 2)
+    )

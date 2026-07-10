@@ -104,22 +104,40 @@ export default function LinkingPage({ params }: { params: { token: string } }) {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="tg-id" className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">
-                    Enter Your Telegram User ID
-                  </label>
-                  <Input
-                    id="tg-id"
-                    inputMode="numeric"
-                    placeholder="e.g. 123456789"
-                    value={telegramUserId}
-                    onChange={(e) => setTelegramUserId(e.target.value.replace(/\D/g, ''))}
-                    disabled={isLinking}
-                  />
+              <div className="space-y-6">
+                <div className="text-center pb-6 border-b border-slate-200 dark:border-slate-800">
+                  <Button
+                    onClick={() => {
+                      const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
+                      window.open(`https://t.me/${botUsername}?start=${token}`, '_blank');
+                    }}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold flex items-center justify-center gap-2"
+                  >
+                    ✈️ Link in Telegram (One-Click)
+                  </Button>
                   <p className="text-xs text-slate-500 mt-2">
-                    Don't know your ID? Send <span className="font-semibold">/start</span> to your bot to find it.
+                    Open Telegram and link your account instantly.
                   </p>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-xs text-center uppercase tracking-wider text-slate-400 font-semibold">Or Link Manually</p>
+                  <div>
+                    <label htmlFor="tg-id" className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">
+                      Enter Your Telegram User ID
+                    </label>
+                    <Input
+                      id="tg-id"
+                      inputMode="numeric"
+                      placeholder="e.g. 123456789"
+                      value={telegramUserId}
+                      onChange={(e) => setTelegramUserId(e.target.value.replace(/\D/g, ''))}
+                      disabled={isLinking}
+                    />
+                    <p className="text-xs text-slate-500 mt-2">
+                      Don't know your ID? Send <span className="font-semibold">/start</span> to your bot to find it.
+                    </p>
+                  </div>
                 </div>
 
                 <Button
