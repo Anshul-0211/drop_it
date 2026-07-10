@@ -27,18 +27,61 @@ export const authOptions: AuthOptions = {
       try {
         // Keep auth permissive: DB sync should not block OAuth login.
         if (githubId || email) {
-          const payload: Record<string, string> = {};
-          if (email) payload.email = email;
-          if (githubId) payload.github_id = githubId;
+          // 1. Check if user already exists by github_id
+          let userByGithub = null;
+          if (githubId) {
+            const { data } = await supabaseAdmin
+              .from('users')
+              .select('id, email')
+              .eq('github_id', githubId)
+              .maybeSingle();
+            userByGithub = data;
+          }
 
-          if (payload.email) {
-            const { error } = await supabaseAdmin.from('users').upsert(payload, {
-              onConflict: 'email',
-              ignoreDuplicates: false,
-            });
+          if (userByGithub) {
+            // Update email if it changed
+            if (email && userByGithub.email !== email) {
+              const { error } = await supabaseAdmin
+                .from('users')
+                .update({ email })
+                .eq('id', userByGithub.id);
+              if (error) {
+                console.error('Non-blocking user sync error (email update):', error);
+              }
+            }
+          } else {
+            // 2. Check if user already exists by email
+            let userByEmail = null;
+            if (email) {
+              const { data } = await supabaseAdmin
+                .from('users')
+                .select('id, github_id')
+                .eq('email', email)
+                .maybeSingle();
+              userByEmail = data;
+            }
 
-            if (error) {
-              console.error('Non-blocking user sync error during sign-in:', error);
+            if (userByEmail) {
+              // Update github_id if missing or different
+              if (githubId && userByEmail.github_id !== githubId) {
+                const { error } = await supabaseAdmin
+                  .from('users')
+                  .update({ github_id: githubId })
+                  .eq('id', userByEmail.id);
+                if (error) {
+                  console.error('Non-blocking user sync error (github_id update):', error);
+                }
+              }
+            } else {
+              // 3. Neither exists: create new user
+              if (email) {
+                const { error } = await supabaseAdmin
+                  .from('users')
+                  .insert({ email, github_id: githubId });
+                if (error) {
+                  console.error('Non-blocking user sync error (insert new user):', error);
+                }
+              }
             }
           }
         }

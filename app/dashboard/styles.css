@@ -1,0 +1,320 @@
+/* ─── drop_it Dashboard Revamp — Design Token System ─── */
+
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ─── Light Mode: Amber & Ivory ─── */
+:root,
+[data-theme="light"] {
+  --bg-base:        #FAF9F5;
+  --bg-surface:     #FFFFFF;
+  --bg-subtle:      #F5F3EE;
+  --bg-hover:       #EDE9E0;
+  --border:         #E7E5DF;
+  --border-strong:  #D6D1C7;
+
+  --accent-primary: #D97706;
+  --accent-hover:   #B45309;
+  --accent-soft:    #FEF3C7;
+  --accent-text:    #92400E;
+
+  --text-primary:   #1C1917;
+  --text-secondary: #78716C;
+  --text-muted:     #A8A29E;
+  --text-inverse:   #FFFFFF;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:  0 12px 32px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.04);
+
+  --destructive:      #DC2626;
+  --destructive-soft: #FEE2E2;
+
+  --radius-card: 14px;
+  --radius-pill: 9999px;
+  --radius-sm:   8px;
+  --radius-md:   10px;
+
+  --transition-fast:   120ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow:   350ms ease;
+
+  --font-display: 'Lora', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  color-scheme: light;
+}
+
+/* ─── Dark Mode: Dark Walnut ─── */
+[data-theme="dark"] {
+  --bg-base:        #16120E;
+  --bg-surface:     #1E1A15;
+  --bg-subtle:      #252018;
+  --bg-hover:       #2E2820;
+  --border:         rgba(255, 220, 150, 0.08);
+  --border-strong:  rgba(255, 220, 150, 0.16);
+
+  --accent-primary: #F59E0B;
+  --accent-hover:   #FCD34D;
+  --accent-soft:    rgba(245, 158, 11, 0.15);
+  --accent-text:    #FCD34D;
+
+  --text-primary:   #FAF9F5;
+  --text-secondary: #A8A29E;
+  --text-muted:     #6B6560;
+  --text-inverse:   #1C1917;
+
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:  0 16px 40px rgba(0,0,0,0.6);
+
+  --destructive:      #EF4444;
+  --destructive-soft: rgba(239, 68, 68, 0.15);
+
+  color-scheme: dark;
+}
+
+/* ─── Base Styles ─── */
+.dt-root {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  transition: background-color var(--transition-slow), color var(--transition-slow);
+}
+
+/* ─── Surface ─── */
+.dt-surface {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.dt-surface-subtle {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border);
+}
+
+/* ─── Nav button ─── */
+.dt-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: left;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.dt-nav-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.dt-nav-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-left: 3px solid var(--accent-primary);
+  padding-left: 9px;
+}
+
+/* ─── Card base ─── */
+.dt-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: box-shadow var(--transition-normal), transform var(--transition-normal), border-color var(--transition-normal);
+}
+
+.dt-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+}
+
+/* ─── Badge ─── */
+.dt-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* ─── Quick-capture bar ─── */
+.dt-capture-bar {
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.dt-capture-bar:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-md);
+}
+
+/* ─── Filter pill ─── */
+.dt-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dt-filter-pill:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.dt-filter-pill.active {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border-color: var(--accent-primary);
+}
+
+/* ─── Primary button ─── */
+.dt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+.dt-btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ─── Ghost button ─── */
+.dt-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dt-btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* ─── Section heading ─── */
+.dt-heading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* ─── Skeleton loader ─── */
+.dt-skeleton {
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--bg-hover) 50%, var(--bg-subtle) 75%);
+  background-size: 200% 100%;
+  animation: dt-shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes dt-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Command Palette Backdrop ─── */
+.dt-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+
+/* ─── Mobile bottom nav ─── */
+.dt-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+}
+
+/* Hide on desktop — overrides the flex above */
+@media (min-width: 1024px) {
+  .dt-bottom-nav {
+    display: none !important;
+  }
+}
+
+.dt-bottom-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 4px 12px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: color var(--transition-fast);
+}
+
+.dt-bottom-nav-btn.active {
+  color: var(--accent-primary);
+}
+
+/* ─── Scrollbar ─── */
+.dt-scroll::-webkit-scrollbar { width: 5px; }
+.dt-scroll::-webkit-scrollbar-track { background: transparent; }
+.dt-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 9999px;
+}
