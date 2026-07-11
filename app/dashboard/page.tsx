@@ -273,10 +273,16 @@ export default function DashboardTest() {
           event: '*',
           schema: 'public',
           table: 'items',
-          filter: `user_id=eq.${userId}`,
         },
-        () => {
-          triggerRefresh();
+        (payload: any) => {
+          const newItem = payload.new as any;
+          const oldItem = payload.old as any;
+          if (
+            (newItem && newItem.user_id === userId) ||
+            (oldItem && oldItem.user_id === userId)
+          ) {
+            triggerRefresh();
+          }
         }
       )
       .subscribe();
