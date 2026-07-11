@@ -234,9 +234,9 @@ export default function DashboardTest() {
     } catch { /* silent */ }
   }, [sessionEmail]);
 
-  const fetchItems = useCallback(async () => {
+  const fetchItems = useCallback(async (isBackground = false) => {
     if (!sessionEmail) return;
-    setIsLoading(true);
+    if (!isBackground) setIsLoading(true);
     try {
       const params = new URLSearchParams({ section: activeSection, q: debouncedSearch, time: dateFilter });
       if (activeFolderId) params.set('folder_id', activeFolderId);
@@ -248,7 +248,7 @@ export default function DashboardTest() {
         if (data.counts) setCounts(data.counts);
       }
     } catch { /* silent */ } finally {
-      setIsLoading(false);
+      if (!isBackground) setIsLoading(false);
     }
   // refreshTrigger is intentionally included: manual refresh only
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -266,7 +266,7 @@ export default function DashboardTest() {
 
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        void fetchItems();
+        void fetchItems(true); // Quiet background fetch (no skeletons)
         void fetchFolders();
       }
     }, 10000); // 10 seconds
