@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, List, CalendarDays, ChevronDown, X, RotateCw } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 import './styles.css';
 import DashboardNavbar from './components/DashboardNavbar';
@@ -260,37 +259,20 @@ export default function DashboardTest() {
   useEffect(() => { void fetchFolders(); }, [fetchFolders]);
   useEffect(() => { void fetchItems(); }, [fetchItems]);
 
-  // Realtime subscription — automatically reloads the items when a changes occur in Supabase database
+  // Visibility-aware background polling — auto-refresh items every 10s only when the tab is actively visible.
+  // This avoids database RLS issues and prevents Vercel cold-starts when the browser tab is minimized.
   useEffect(() => {
-    const userId = (session?.user as any)?.id;
-    if (!userId || !supabase) return;
+    if (status !== 'authenticated') return;
 
-    const channel = supabase
-      .channel('realtime_items_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'items',
-        },
-        (payload: any) => {
-          const newItem = payload.new as any;
-          const oldItem = payload.old as any;
-          if (
-            (newItem && newItem.user_id === userId) ||
-            (oldItem && oldItem.user_id === userId)
-          ) {
-            triggerRefresh();
-          }
-        }
-      )
-      .subscribe();
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchItems();
+        void fetchFolders();
+      }
+    }, 10000); // 10 seconds
 
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [session, triggerRefresh]);
+    return () => clearInterval(interval);
+  }, [status, fetchItems, fetchFolders]);
 
   const handleItemAction = async (item: Item, action: ItemAction, payload?: Record<string, unknown>) => {
     const res = await fetch(`/api/items/${item.id}`, {
