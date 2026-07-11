@@ -57,13 +57,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Process the message asynchronously
-    // Don't wait for response to avoid timeout
-    handleTelegramMessage(update).catch(error => {
+    // Process the message and await completion to prevent Vercel serverless freeze
+    try {
+      await handleTelegramMessage(update);
+    } catch (error) {
       console.error('Error processing telegram message:', error);
-    });
+    }
 
-    // Acknowledge receipt immediately
+    // Acknowledge receipt
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Telegram webhook error:', error);
