@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutGrid, List, CalendarDays, ChevronDown, X } from 'lucide-react';
+import { LayoutGrid, List, CalendarDays, ChevronDown, X, RotateCw } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 import './styles.css';
 import DashboardNavbar from './components/DashboardNavbar';
@@ -259,6 +260,32 @@ export default function DashboardTest() {
   useEffect(() => { void fetchFolders(); }, [fetchFolders]);
   useEffect(() => { void fetchItems(); }, [fetchItems]);
 
+  // Realtime subscription — automatically reloads the items when a changes occur in Supabase database
+  useEffect(() => {
+    const userId = (session?.user as any)?.id;
+    if (!userId || !supabase) return;
+
+    const channel = supabase
+      .channel('realtime_items_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'items',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          triggerRefresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [session, triggerRefresh]);
+
   const handleItemAction = async (item: Item, action: ItemAction, payload?: Record<string, unknown>) => {
     const res = await fetch(`/api/items/${item.id}`, {
       method: 'PATCH',
@@ -480,8 +507,25 @@ export default function DashboardTest() {
               </div>
             </div>
 
+            {/* Refresh button */}
+            <button
+              onClick={triggerRefresh}
+              className="p-2 rounded-lg transition-all shrink-0"
+              style={{
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              title="Refresh items"
+              disabled={isLoading}
+            >
+              <RotateCw size={14} className={isLoading ? 'animate-spin' : ''} />
+            </button>
+
             {/* View mode toggle */}
-            <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+            <div className="flex rounded-lg overflow-hidden shrink-0" style={{ border: '1px solid var(--border)' }}>
               <button
                 onClick={() => setViewMode('grid')}
                 className="p-2 transition-all"
