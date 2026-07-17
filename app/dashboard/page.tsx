@@ -203,6 +203,29 @@ export default function DashboardTest() {
     isSaving: false,
   });
 
+  // Folder-move modal
+  const [folderMoveModal, setFolderMoveModal] = useState<{
+    open: boolean;
+    item: Item | null;
+    isSaving: boolean;
+  }>({ open: false, item: null, isSaving: false });
+
+  const openFolderMove = (item: Item) => setFolderMoveModal({ open: true, item, isSaving: false });
+  const closeFolderMove = () => setFolderMoveModal({ open: false, item: null, isSaving: false });
+
+  const submitFolderMove = async (folderId: string | null) => {
+    if (!folderMoveModal.item) return;
+    setFolderMoveModal((p) => ({ ...p, isSaving: true }));
+    try {
+      await handleItemAction(folderMoveModal.item, 'move-folder', { folder_id: folderId });
+    } finally {
+      closeFolderMove();
+    }
+  };
+
+  // Drag-and-drop state — tracks the item being dragged
+  const [draggedItem, setDraggedItem] = useState<Item | null>(null);
+
   const debouncedSearch = useDebounce(searchText, 300);
 
   // ⌘K shortcut
@@ -418,6 +441,12 @@ export default function DashboardTest() {
           counts={counts}
           onCreateFolder={openCreate}
           onRenameFolder={openRename}
+          draggedItem={draggedItem}
+          onDropToFolder={async (folderId) => {
+            if (!draggedItem) return;
+            await handleItemAction(draggedItem, 'move-folder', { folder_id: folderId });
+            setDraggedItem(null);
+          }}
         />
 
         <main className="flex-1 min-w-0">
@@ -549,7 +578,7 @@ export default function DashboardTest() {
               >
                 {items.map((item, i) => {
                   const type = getItemType(item);
-                  const sharedProps = { item, folders, onAction: handleItemAction, onOpen: handleOpenItem, onRename: openItemRename };
+                  const sharedProps = { item, folders, onAction: handleItemAction, onOpen: handleOpenItem, onRename: openItemRename, onMoveToFolder: openFolderMove };
                   return (
                     <motion.div
                       key={item.id}
@@ -557,9 +586,13 @@ export default function DashboardTest() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.96 }}
                       transition={{ delay: i * 0.04, duration: 0.2 }}
+                      draggable
+                      onDragStart={() => setDraggedItem(item)}
+                      onDragEnd={() => setDraggedItem(null)}
+                      style={{ cursor: 'grab' }}
                     >
                       {type === 'note' ? (
-                        <NoteCard item={item} onAction={handleItemAction} onRename={openItemRename} />
+                        <NoteCard item={item} onAction={handleItemAction} onRename={openItemRename} onMoveToFolder={openFolderMove} />
                       ) : type === 'image' ? (
                         <ImageCard {...sharedProps} />
                       ) : type === 'file' ? (
@@ -686,6 +719,76 @@ export default function DashboardTest() {
                   {itemRenameModal.isSaving ? 'Saving...' : 'Save'}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Folder Move Modal */}
+      <AnimatePresence>
+        {folderMoveModal.open && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={closeFolderMove}>
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.97 }}
+              className="w-full max-w-sm rounded-2xl p-5"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', color: 'var(--text-primary)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="dt-heading text-lg">Move to Folder</h2>
+                <button onClick={closeFolderMove} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+                Choose a folder for &ldquo;{folderMoveModal.item?.title?.substring(0, 40)}&rdquo;
+              </p>
+
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {/* No folder option */}
+                <button
+                  className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+                  style={{ color: 'var(--text-secondary)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  onClick={() => void submitFolderMove(null)}
+                  disabled={folderMoveModal.isSaving}
+                >
+                  <span style={{ fontSize: '16px' }}>📭</span>
+                  <span>No folder (Inbox)</span>
+                </button>
+
+                {folders.map((folder) => (
+                  <button
+                    key={folder.id}
+                    className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style={{ color: 'var(--text-secondary)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    onClick={() => void submitFolderMove(folder.id)}
+                    disabled={folderMoveModal.isSaving}
+                  >
+                    <span style={{ fontSize: '16px' }}>📁</span>
+                    <span className="flex-1 truncate">{folder.name}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}>
+                      {folder.item_count ?? 0}
+                    </span>
+                  </button>
+                ))}
+
+                {folders.length === 0 && (
+                  <p className="px-3 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    No folders yet. Create one from the sidebar.
+                  </p>
+                )}
+              </div>
+
+              {folderMoveModal.isSaving && (
+                <p className="text-xs mt-3 text-center" style={{ color: 'var(--text-muted)' }}>Moving...</p>
+              )}
             </motion.div>
           </div>
         )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Download, Trash2, File, FileImage, Pencil } from 'lucide-react';
+import { FileText, Download, Trash2, File, FileImage, Pencil, FolderInput } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Item } from '@/lib/types';
 import { ItemAction } from '@/app/components/ItemCard';
@@ -11,6 +11,7 @@ interface FileCardProps {
   onAction: (item: Item, action: ItemAction, payload?: Record<string, unknown>) => Promise<void>;
   onOpen: (item: Item) => void;
   onRename?: (item: Item) => void;
+  onMoveToFolder?: (item: Item) => void;
 }
 
 function getFileExtension(url?: string | null, title?: string | null): string {
@@ -32,7 +33,7 @@ const EXT_COLORS: Record<string, string> = {
   jpg: '#F59E0B', jpeg: '#F59E0B', png: '#F59E0B', gif: '#F59E0B',
 };
 
-export default function FileCard({ item, onAction, onOpen, onRename }: FileCardProps) {
+export default function FileCard({ item, onAction, onOpen, onRename, onMoveToFolder }: FileCardProps) {
   const [isActing, setIsActing] = useState(false);
   const ext = getFileExtension(item.file_url, item.title);
   const iconColor = EXT_COLORS[ext] ?? 'var(--accent-primary)';
@@ -114,6 +115,16 @@ export default function FileCard({ item, onAction, onOpen, onRename }: FileCardP
           title="Download"
         >
           <Download size={14} />
+        </button>
+        <button
+          className="p-2 rounded-lg transition-all"
+          style={{ color: 'var(--text-muted)' }}
+          onClick={(e) => { e.stopPropagation(); onMoveToFolder?.(item); }}
+          title="Move to folder"
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent-primary)'; e.currentTarget.style.background = 'var(--accent-soft)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          <FolderInput size={14} />
         </button>
         <button
           className="p-2 rounded-lg transition-all"

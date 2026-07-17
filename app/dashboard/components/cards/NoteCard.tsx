@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Check, Trash2, Pencil } from 'lucide-react';
+import { Copy, Check, Trash2, Pencil, FolderInput } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Item } from '@/lib/types';
 import { ItemAction } from '@/app/components/ItemCard';
@@ -10,9 +10,10 @@ interface NoteCardProps {
   item: Item;
   onAction: (item: Item, action: ItemAction, payload?: Record<string, unknown>) => Promise<void>;
   onRename?: (item: Item) => void;
+  onMoveToFolder?: (item: Item) => void;
 }
 
-export default function NoteCard({ item, onAction, onRename }: NoteCardProps) {
+export default function NoteCard({ item, onAction, onRename, onMoveToFolder }: NoteCardProps) {
   const [copied, setCopied] = useState(false);
   const [isActing, setIsActing] = useState(false);
 
@@ -91,6 +92,16 @@ export default function NoteCard({ item, onAction, onRename }: NoteCardProps) {
           </button>
           <button
             className="ml-auto p-1.5 rounded-lg transition-all"
+            style={{ color: 'var(--text-muted)' }}
+            onClick={(e) => { e.stopPropagation(); onMoveToFolder?.(item); }}
+            title="Move to folder"
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent-primary)'; e.currentTarget.style.background = 'var(--accent-soft)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+          >
+            <FolderInput size={13} />
+          </button>
+          <button
+            className="p-1.5 rounded-lg transition-all"
             style={{ color: 'var(--text-muted)' }}
             onClick={(e) => { e.stopPropagation(); onRename?.(item); }}
             title="Rename title"

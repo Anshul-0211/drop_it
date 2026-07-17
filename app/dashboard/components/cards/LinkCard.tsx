@@ -13,13 +13,14 @@ interface LinkCardProps {
   onAction: (item: Item, action: ItemAction, payload?: Record<string, unknown>) => Promise<void>;
   onOpen: (item: Item) => void;
   onRename?: (item: Item) => void;
+  onMoveToFolder?: (item: Item) => void;
 }
 
 function getDomain(url?: string | null) {
   try { return new URL(url ?? '').hostname.replace('www.', ''); } catch { return null; }
 }
 
-export default function LinkCard({ item, folders, viewMode = 'grid', onAction, onOpen, onRename }: LinkCardProps) {
+export default function LinkCard({ item, folders, viewMode = 'grid', onAction, onOpen, onRename, onMoveToFolder }: LinkCardProps) {
   const [isActing, setIsActing] = useState(false);
   const domain = getDomain(item.url);
   const isUnread = item.status === 'unread';
@@ -115,6 +116,16 @@ export default function LinkCard({ item, folders, viewMode = 'grid', onAction, o
           </button>
           <button
             className="ml-auto p-1.5 rounded-lg transition-all"
+            style={{ color: 'var(--text-muted)' }}
+            onClick={() => onMoveToFolder?.(item)}
+            title="Move to folder"
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent-primary)'; e.currentTarget.style.background = 'var(--accent-soft)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+          >
+            <FolderInput size={13} />
+          </button>
+          <button
+            className="p-1.5 rounded-lg transition-all"
             style={{ color: 'var(--text-muted)' }}
             onClick={() => onRename?.(item)}
             title="Rename title"

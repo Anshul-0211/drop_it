@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { Inbox, Bookmark, Trash2, Folder as FolderIcon, Plus, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Folder, ItemSection } from '@/lib/types';
+import { Folder, Item, ItemSection } from '@/lib/types';
 
 interface SidebarProps {
   activeSection: ItemSection;
@@ -13,6 +14,8 @@ interface SidebarProps {
   counts: { inbox: number; saved: number; trash: number };
   onCreateFolder: () => void;
   onRenameFolder: (folder: Folder) => void;
+  draggedItem?: Item | null;
+  onDropToFolder?: (folderId: string | null) => Promise<void>;
 }
 
 const navItems = [
@@ -30,7 +33,26 @@ export default function Sidebar({
   counts,
   onCreateFolder,
   onRenameFolder,
+  draggedItem,
+  onDropToFolder,
 }: SidebarProps) {
+  const [dropTargetId, setDropTargetId] = useState<string | 'inbox' | null>(null);
+  const isDragging = !!draggedItem;
+
+  const handleDragOver = (e: React.DragEvent, id: string | 'inbox') => {
+    if (!isDragging) return;
+    e.preventDefault();
+    setDropTargetId(id);
+  };
+
+  const handleDragLeave = () => setDropTargetId(null);
+
+  const handleDrop = async (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault();
+    setDropTargetId(null);
+    if (onDropToFolder) await onDropToFolder(folderId);
+  };
+
   return (
     <aside
       className="hidden lg:flex flex-col w-56 shrink-0 rounded-xl p-2 dt-scroll overflow-y-auto"
@@ -97,30 +119,59 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* All folders */}
-        <button
-          onClick={() => onFolderSelect(null)}
-          className="dt-nav-btn"
-          style={activeFolderId === null ? { background: 'var(--bg-hover)', color: 'var(--text-primary)' } : {}}
+        {/* All folders — also a drop target (removes from folder → inbox) */}
+        <div
+          onDragOver={(e) => handleDragOver(e, 'inbox')}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => void handleDrop(e, null)}
+          style={{
+            borderRadius: '10px',
+            transition: 'all 0.15s ease',
+            ...(dropTargetId === 'inbox' && isDragging ? {
+              background: 'var(--accent-soft)',
+              outline: '2px dashed var(--accent-primary)',
+            } : {}),
+          }}
         >
-          <FolderIcon size={15} />
-          <span className="flex-1">All folders</span>
-        </button>
+          <button
+            onClick={() => onFolderSelect(null)}
+            className="dt-nav-btn w-full"
+            style={activeFolderId === null ? { background: 'var(--bg-hover)', color: 'var(--text-primary)' } : {}}
+          >
+            <FolderIcon size={15} />
+            <span className="flex-1">All folders</span>
+            {dropTargetId === 'inbox' && isDragging && (
+              <span className="text-xs font-semibold" style={{ color: 'var(--accent-primary)' }}>Drop</span>
+            )}
+          </button>
+        </div>
 
-        {/* User folders */}
+        {/* User folders — each is a drop target */}
         {folders.map((folder) => {
           const isActive = activeFolderId === folder.id;
+          const isOver = dropTargetId === folder.id && isDragging;
           return (
             <motion.div
               key={folder.id}
               layout
               className="flex items-center gap-1 rounded-xl pr-1"
-              style={isActive ? { background: 'var(--accent-soft)' } : {}}
+              style={{
+                ...(isActive ? { background: 'var(--accent-soft)' } : {}),
+                ...(isOver ? {
+                  background: 'var(--accent-soft)',
+                  outline: '2px dashed var(--accent-primary)',
+                  borderRadius: '10px',
+                } : {}),
+                transition: 'all 0.15s ease',
+              }}
+              onDragOver={(e) => handleDragOver(e, folder.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => void handleDrop(e, folder.id)}
             >
               <button
                 onClick={() => onFolderSelect(folder.id)}
                 className="flex flex-1 min-w-0 items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all"
-                style={isActive ? { color: 'var(--accent-text)' } : { color: 'var(--text-secondary)' }}
+                style={isActive || isOver ? { color: 'var(--accent-text)' } : { color: 'var(--text-secondary)' }}
               >
                 <FolderIcon size={15} className="shrink-0" />
                 <span className="truncate">{folder.name}</span>
@@ -131,16 +182,23 @@ export default function Sidebar({
                   {folder.item_count ?? 0}
                 </span>
               </button>
-              <button
-                onClick={() => onRenameFolder(folder)}
-                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shrink-0"
-                title="Rename folder"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <Pencil size={13} />
-              </button>
+              {!isDragging && (
+                <button
+                  onClick={() => onRenameFolder(folder)}
+                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                  title="Rename folder"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Pencil size={13} />
+                </button>
+              )}
+              {isOver && (
+                <span className="text-xs font-semibold pr-1 shrink-0" style={{ color: 'var(--accent-primary)' }}>
+                  Drop ↓
+                </span>
+              )}
             </motion.div>
           );
         })}
@@ -149,6 +207,18 @@ export default function Sidebar({
           <p className="px-3 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
             No folders yet. Create one to organize your items.
           </p>
+        )}
+
+        {/* Drag hint */}
+        {isDragging && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="px-3 pt-3 text-xs text-center"
+            style={{ color: 'var(--accent-primary)' }}
+          >
+            Drop onto a folder above
+          </motion.p>
         )}
       </div>
     </aside>

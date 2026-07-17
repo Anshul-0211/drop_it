@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ZoomIn, Trash2, X, Pencil } from 'lucide-react';
+import { ZoomIn, Trash2, X, Pencil, FolderInput } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Item } from '@/lib/types';
 import { ItemAction } from '@/app/components/ItemCard';
@@ -11,9 +11,10 @@ interface ImageCardProps {
   onAction: (item: Item, action: ItemAction, payload?: Record<string, unknown>) => Promise<void>;
   onOpen: (item: Item) => void;
   onRename?: (item: Item) => void;
+  onMoveToFolder?: (item: Item) => void;
 }
 
-export default function ImageCard({ item, onAction, onOpen, onRename }: ImageCardProps) {
+export default function ImageCard({ item, onAction, onOpen, onRename, onMoveToFolder }: ImageCardProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isActing, setIsActing] = useState(false);
 
@@ -64,6 +65,14 @@ export default function ImageCard({ item, onAction, onOpen, onRename }: ImageCar
             </button>
             <button
               className="ml-auto p-1.5 rounded-lg text-white/70 hover:text-white transition-colors"
+              style={{ background: 'rgba(255,255,255,0.15)' }}
+              onClick={(e) => { e.stopPropagation(); onMoveToFolder?.(item); }}
+              title="Move to folder"
+            >
+              <FolderInput size={13} />
+            </button>
+            <button
+              className="p-1.5 rounded-lg text-white/70 hover:text-white transition-colors"
               style={{ background: 'rgba(255,255,255,0.15)' }}
               onClick={(e) => { e.stopPropagation(); onRename?.(item); }}
               title="Rename title"
