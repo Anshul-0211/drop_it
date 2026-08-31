@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, List, CalendarDays, ChevronDown, X, RotateCw } from 'lucide-react';
@@ -176,6 +176,10 @@ export default function DashboardTest() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchText, setSearchText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const observerTargetRef = useRef<HTMLDivElement>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false);
   const [counts, setCounts] = useState({ inbox: 0, saved: 0, trash: 0, unread: 0, read: 0 });
@@ -259,15 +263,42 @@ export default function DashboardTest() {
 
   const fetchItems = useCallback(async (isBackground = false) => {
     if (!sessionEmail) return;
-    if (!isBackground) setIsLoading(true);
+    if (!isBackground) {
+      setIsLoading(true);
+    }
     try {
-      const params = new URLSearchParams({ section: activeSection, q: debouncedSearch, time: dateFilter });
+      const params = new URLSearchParams({
+        section: activeSection,
+        q: debouncedSearch,
+        time: dateFilter,
+        page: '1',
+        limit: '20',
+      });
       if (activeFolderId) params.set('folder_id', activeFolderId);
       if (activeSection !== 'trash') params.set('state', stateFilter);
       const res = await fetch(`/api/items?${params}`);
       const data: ItemsResponse = await res.json();
       if (res.ok) {
-        setItems(data.data ?? []);
+        const fetchedItems = data.data ?? [];
+        const total = data.total ?? fetchedItems.length;
+        if (isBackground) {
+          // Quietly merge/prepend newly added items without resetting pagination
+          setItems((prev) => {
+            const existingIds = new Set(prev.map((i) => i.id));
+            const freshItems = fetchedItems.filter((i) => !existingIds.has(i.id));
+            if (freshItems.length > 0) {
+              return [...freshItems, ...prev];
+            }
+            return prev.map((existing) => {
+              const updated = fetchedItems.find((i) => i.id === existing.id);
+              return updated ? { ...existing, ...updated } : existing;
+            });
+          });
+        } else {
+          setItems(fetchedItems);
+          setPage(1);
+          setHasMore(fetchedItems.length === (data.perPage ?? 20) && fetchedItems.length < total);
+        }
         if (data.counts) setCounts(data.counts);
       }
     } catch { /* silent */ } finally {
@@ -277,10 +308,72 @@ export default function DashboardTest() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionEmail, activeSection, debouncedSearch, dateFilter, stateFilter, activeFolderId, refreshTrigger]);
 
+  const loadMore = useCallback(async () => {
+    if (!sessionEmail || isLoading || isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    const nextPage = page + 1;
+    try {
+      const params = new URLSearchParams({
+        section: activeSection,
+        q: debouncedSearch,
+        time: dateFilter,
+        page: String(nextPage),
+        limit: '20',
+      });
+      if (activeFolderId) params.set('folder_id', activeFolderId);
+      if (activeSection !== 'trash') params.set('state', stateFilter);
+      const res = await fetch(`/api/items?${params}`);
+      const data: ItemsResponse = await res.json();
+      if (res.ok) {
+        const newItems = data.data ?? [];
+        if (newItems.length > 0) {
+          setItems((prev) => {
+            const existingIds = new Set(prev.map((i) => i.id));
+            const uniqueNew = newItems.filter((i) => !existingIds.has(i.id));
+            const nextList = [...prev, ...uniqueNew];
+            const total = data.total ?? nextList.length;
+            setHasMore(newItems.length === (data.perPage ?? 20) && nextList.length < total);
+            return nextList;
+          });
+          setPage(nextPage);
+        } else {
+          setHasMore(false);
+        }
+        if (data.counts) setCounts(data.counts);
+      }
+    } catch {
+      /* silent */
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [sessionEmail, isLoading, isLoadingMore, hasMore, page, activeSection, debouncedSearch, dateFilter, activeFolderId, stateFilter]);
+
   // Only auto-fetch on first load and intentional filter changes.
   // Tab visibility changes do NOT cause a refetch.
   useEffect(() => { void fetchFolders(); }, [fetchFolders]);
   useEffect(() => { void fetchItems(); }, [fetchItems]);
+
+  // Infinite scroll intersection observer
+  useEffect(() => {
+    const target = observerTargetRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+          void loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '250px',
+        threshold: 0.05,
+      }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, isLoadingMore, loadMore]);
 
   // Visibility-aware background polling — auto-refresh items every 10s only when the tab is actively visible.
   // This avoids database RLS issues and prevents Vercel cold-starts when the browser tab is minimized.
@@ -605,6 +698,46 @@ export default function DashboardTest() {
                 })}
               </motion.div>
             </AnimatePresence>
+          )}
+
+          {/* Infinite scroll loader & sentinel */}
+          {!isLoading && items.length > 0 && (
+            <div className="mt-6">
+              {isLoadingMore && (
+                <div
+                  className={`grid gap-4 ${
+                    viewMode === 'grid'
+                      ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
+                      : 'grid-cols-1'
+                  }`}
+                >
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={`more-skeleton-${i}`}
+                      className="dt-skeleton rounded-2xl"
+                      style={{ height: viewMode === 'grid' ? '200px' : '72px' }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Observer sentinel target */}
+              <div ref={observerTargetRef} className="h-6 w-full pointer-events-none opacity-0" />
+
+              {/* Reached end banner */}
+              {!hasMore && !isLoadingMore && (
+                <div
+                  className="flex items-center justify-center gap-3 py-8 text-xs font-medium"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <span className="h-px w-12" style={{ background: 'var(--border)' }} />
+                  <span>
+                    All {items.length} {items.length === 1 ? 'item' : 'items'} loaded
+                  </span>
+                  <span className="h-px w-12" style={{ background: 'var(--border)' }} />
+                </div>
+              )}
+            </div>
           )}
         </main>
       </div>

@@ -29,7 +29,8 @@ This file documents all backend API endpoints, detailing their paths, methods, a
     *   `time`: `all` (default), `today`, `yesterday`, `7d`, or `30d`.
     *   `folder_id`: Optional UUID of a folder.
     *   `q`: Optional search query string.
-    *   `page`: Pagination page number (defaults to `1`, items per page = `20`).
+    *   `page`: Pagination page number (defaults to `1`).
+    *   `limit`: Optional page size (defaults to `20`, max `100`).
 *   **Output**:
     ```json
     {

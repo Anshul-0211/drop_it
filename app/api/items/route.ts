@@ -69,8 +69,8 @@ export async function GET(req: NextRequest) {
     const folderId = searchParams.get('folder_id');
     const q = searchParams.get('q') || '';
     const tags = searchParams.get('tags')?.split(',').filter(Boolean) || [];
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = 20;
+    const page = Math.max(parseInt(searchParams.get('page') || '1') || 1, 1);
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '20') || 20, 1), 100);
     const offset = (page - 1) * limit;
 
     // Non-blocking purge hook; older DBs may not have this function yet.
