@@ -366,7 +366,7 @@ export default function DashboardTest() {
       },
       {
         root: null,
-        rootMargin: '250px',
+        rootMargin: '400px',
         threshold: 0.05,
       }
     );
